@@ -1,10 +1,10 @@
-module  external-dns-ns {
-  source      = "farrukh90/ns/kubernetes"
-  name        = "external-dns"
-  annotations  = {
+module "external-dns-ns" {
+  source = "farrukh90/ns/kubernetes"
+  name   = "external-dns"
+  annotations = {
     application = "external-dns"
   }
-  labels       = {
+  labels = {
     managedby = "terraform"
   }
 }

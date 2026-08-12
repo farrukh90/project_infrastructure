@@ -4,8 +4,14 @@ variable "dns_name" {
   default     = "example.com"
 }
 
-variable project_id {
+variable "project_id" {
   description = "Please specify your project ID"
-  type = string 
-  default = ""
+  type        = string
+  default     = ""
+}
+
+variable "ingress" {
+  description = "Enable / Disable ingress service"
+  type        = bool
+  default     = false
 }
