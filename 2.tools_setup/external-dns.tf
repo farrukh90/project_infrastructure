@@ -52,6 +52,15 @@ module "external-dns" {
   wait       = false
   values = [<<-EOF
 
+global:
+  security:
+    allowInsecureImages: true
+
+image:
+  registry: registry.k8s.io
+  repository: external-dns/external-dns
+  tag: v0.16.0
+
 provider: google
 
 google: 
