@@ -3,3 +3,9 @@ variable "dns_name" {
   type        = string
   default     = "example.com"
 }
+
+variable project_id {
+  description = "Please specify your project ID"
+  type = string 
+  default = ""
+}
