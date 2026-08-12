@@ -1,6 +1,6 @@
 # Build all tools.
 build:
-	source ../scripts/setenv.sh && terraform apply -var-file configurations.tfvars 
+	source ../scripts/setenv.sh && terraform apply -var-file ../0.account_setup/configurations.tfvars 
 
 # Find out list of pods in each worker node.
 count-pods-in-nodes:
@@ -16,4 +16,4 @@ get-sosivio-password:
 
 # Destroy all tools.
 destroy:
-	source ../scripts/setenv.sh && terraform apply -var-file configurations.tfvars 
+	source ../scripts/setenv.sh && terraform apply -var-file ../0.account_setup/configurations.tfvars 

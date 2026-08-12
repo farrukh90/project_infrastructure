@@ -34,7 +34,7 @@ It should be inside the project you created in step2
 #### and add the following message there
 ```
 # Please get your AWS Domain
-google_domain_name = "AWS_DOMAIN"
+dns_name = "AWS_DOMAIN"
 
 # Use GCP account gmail
 email              = "GMAIL"
