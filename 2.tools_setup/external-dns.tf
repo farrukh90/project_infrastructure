@@ -32,7 +32,7 @@ resource "google_project_iam_binding" "externald-dns" {
 }
 
 # Creates local kubernetes secret called external-dns in external-dns namespace
-resource "kubernetes_secret" "external_dns_secret" {
+resource "kubernetes_secret_v1" "external_dns_secret" {
   metadata {
     name      = "external-dns"
     namespace = module.external-dns-ns.name
@@ -46,7 +46,7 @@ resource "kubernetes_secret" "external_dns_secret" {
 module "external-dns" {
   source     = "farrukh90/appdeploy/helm"
   name       = "external-dns"
-  namespace  = "external-dns"
+  namespace  = module.external-dns-ns.name
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "external-dns"
   wait       = false
@@ -72,4 +72,34 @@ rbac:
 
   EOF
   ]
+}
+
+resource "kubernetes_cluster_role_v1" "external_dns_endpoints" {
+  metadata {
+    name = "external-dns-endpoints"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["endpoints"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "external_dns_endpoints" {
+  metadata {
+    name = "external-dns-endpoints"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role_v1.external_dns_endpoints.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "external-dns"
+    namespace = module.external-dns-ns.name
+  }
 }
