@@ -15,3 +15,18 @@ variable "ingress" {
   type        = bool
   default     = false
 }
+
+variable "vault-config" {
+  type        = map(any)
+  description = "Please define vault configurations"
+  default = {
+    deployment_name = "vault"
+    chart_version   = "0.29.0"
+  }
+}
+
+variable "vault" {
+  description = "Enable / Disable vault service"
+  type        = bool
+  default     = false
+}

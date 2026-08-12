@@ -15,3 +15,4 @@ project_id         = "terraform-project-504523"
 
 # Enable / Disable service 
 ingress = false
+vault   = true
