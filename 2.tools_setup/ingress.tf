@@ -18,7 +18,7 @@ module "ingress-terraform-helm" {
   name       = "ingress"
   namespace  = module.ingress-ns[0].name
   chart      = "ingress-nginx"
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "https://kubernetes.github.io/ingress-nginx"
   values = [<<EOF
 controller:
   # SPRINT-013: allow nginx ingress configuration-snippet annotations. Required
