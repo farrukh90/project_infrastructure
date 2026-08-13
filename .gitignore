@@ -41,3 +41,5 @@ terraform.rc
 # Uncomment the line below if you want to ignore planout files.
 # planout
 bin/vault
+1.cluster_setup/.terraform.lock.hcl
+1.cluster_setup/backend.tf
