@@ -15,7 +15,7 @@ module "vault-terraform-helm" {
   source = "farrukh90/release/helm"
 
   deployment_name      = "vault"
-  deployment_namespace = module.vault-ns.name
+  deployment_namespace = module.vault-ns[0].name
   chart                = "vault"
   chart_version        = var.vault-config["chart_version"]
   repository           = "https://helm.releases.hashicorp.com"

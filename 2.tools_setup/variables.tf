@@ -25,6 +25,16 @@ variable "vault-config" {
   }
 }
 
+variable "ingress-controller-config" {
+  type        = map(any)
+  description = "Please define ingress-controller configurations"
+  default = {
+    deployment_name          = "ingress-controller"
+    chart_version            = "0.29.0"
+    loadBalancerSourceRanges = "0.0.0.0/0"
+  }
+}
+
 variable "vault" {
   description = "Enable / Disable vault service"
   type        = bool
