@@ -1,4 +1,4 @@
-output cluster_location {
+output "cluster_location" {
   description = "GKE cluster location"
   value       = google_container_cluster.primary.location
 }

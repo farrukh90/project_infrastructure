@@ -1,18 +1,37 @@
+#######################################
+#### Project wide  configuration
+#######################################
 # Please get your AWS Domain
 dns_name = "awsprojectxconsulting.net"
 
 # Use GCP account gmail
-email              = "farrukhsadykov7@gmail.com"
+email = "farrukhsadykov7@gmail.com"
 
 # Add bucketname you created above
-bucket_name        = "terraform-project-farrukh90"
+bucket_name = "terraform-project-farrukh90"
 
 # Add project id of the project
 # Keep in mind, ID not the name
-project_id         = "terraform-project-504523"
+project_id = "terraform-project-504523"
 
 
+#######################################
+#### GKE Cluster configuration
+#######################################
+gke_config = {
+  cluster_name   = "project-cluster"
+  location       = "us-central1"
+  node_count     = 1
+  min_node_count = 1
+  max_node_count = 2
+  machine_type   = "e2-medium"
+  disk_size_gb   = "50"
+  disk_type      = "pd-balanced"
+}
 
-# Enable / Disable service 
+
+#######################################
+#### Enable and disable services
+#######################################
 ingress = true
 vault   = true
