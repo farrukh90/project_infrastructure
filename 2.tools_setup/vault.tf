@@ -30,11 +30,11 @@ global:
 server:
   resources:
     requests:
+      memory: 128Mi
+      cpu: 128m
+    limits:
       memory: 256Mi
       cpu: 250m
-    limits:
-      memory: 512Mi
-      cpu: 500m
   readinessProbe:
     enabled: false
   annotations:
