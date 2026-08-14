@@ -13,8 +13,14 @@ green=$(tput setaf 2)
 reset=$(tput sgr0)
 
 #########################################################################################################
-if [ "$GOOGLE_APPLICATION_CREDENTIALS" = "/root/.config/gcloud/application_default_credentials.json" ]; then
+if [ "$GOOGLE_APPLICATION_CREDENTIALS" = "$HOME/.config/gcloud/application_default_credentials.json" ]; then
   unset GOOGLE_APPLICATION_CREDENTIALS
+fi
+
+if [ ! -f "$HOME/.config/gcloud/application_default_credentials.json" ]; then
+  echo "${red}Application Default Credentials (ADC) not found.${reset}"
+  echo "${green}Running 'gcloud auth application-default login'...${reset}"
+  gcloud auth application-default login --no-launch-browser
 fi
 
 #########################################################################################################
