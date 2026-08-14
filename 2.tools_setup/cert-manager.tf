@@ -1,15 +1,13 @@
-module "cert-manager-terraform-k8s-namespace" {
-  source    = "farrukh90/namespace/kubernetes"
-  version   = "0.0.11"
-  pod_limit = 1000
-  name      = "cert-manager"
-
-  labels = {
-    environment = "dev"
-  }
+module "cert-manager-ns" {
+  source = "farrukh90/ns/kubernetes"
+  name   = "cert-manager"
 
   annotations = {
-    managed_by = "terraform"
+    application = "cert-manager"
+  }
+
+  labels = {
+    managedby = "terraform"
   }
 }
 
@@ -17,7 +15,7 @@ module "cert-mananger-terraform-helm" {
   source = "farrukh90/release/helm"
 
   deployment_name      = "cert-manager"
-  deployment_namespace = module.cert-manager-terraform-k8s-namespace.name
+  deployment_namespace = module.cert-manager-ns.name
   chart                = "cert-manager"
   chart_version        = var.cert-manager-config["chart_version"]
   repository           = "https://charts.jetstack.io"
