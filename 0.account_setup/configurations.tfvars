@@ -35,3 +35,4 @@ gke_config = {
 #######################################
 ingress = true
 vault   = true
+grafana = true

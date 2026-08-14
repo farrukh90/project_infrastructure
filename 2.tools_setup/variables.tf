@@ -41,3 +41,18 @@ variable "ingress-controller-config" {
     loadBalancerSourceRanges = "0.0.0.0/0"
   }
 }
+
+variable "grafana-config" {
+  type        = map(any)
+  description = "Please define grafana configurations"
+  default = {
+    deployment_name = "grafana"
+    chart_version   = "0.29.0"
+  }
+}
+
+variable "grafana" {
+  description = "Enable / Disable grafana service"
+  type        = bool
+  default     = false
+}
