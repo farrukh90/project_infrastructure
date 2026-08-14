@@ -31,23 +31,6 @@ crds:
 EOF
 }
 
-module "lets-encrypt" {
-  depends_on = [
-    module.cert-mananger-terraform-helm
-  ]
-  source = "farrukh90/release/helm"
-
-  deployment_name      = "lets-encrypt"
-  deployment_namespace = "cert-manager"
-  chart                = "charts/lets-encrypt"
-  chart_version        = var.lets-encrypt-config["chart_version"]
-  values_yaml          = <<EOF
-email: "${var.email}"
-project_id: "${var.project_id}"
-google_domain_name: "${var.dns_name}"
-EOF
-}
-
 resource "kubernetes_manifest" "letsencrypt_prod" {
   manifest = {
     apiVersion = "cert-manager.io/v1"
