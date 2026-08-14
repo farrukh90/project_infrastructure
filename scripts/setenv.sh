@@ -20,15 +20,6 @@ if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ ! -f "$GOOGLE_APPLICATION_CREDE
   unset GOOGLE_APPLICATION_CREDENTIALS
 fi
 
-# Check for Application Default Credentials (ADC)
-if [ ! -f "$HOME/.config/gcloud/application_default_credentials.json" ]; then
-  echo "${red}Application Default Credentials (ADC) not found.${reset}"
-  echo "${green}Terraform GCS backend requires ADC to authenticate in new terminals.${reset}"
-  echo "${green}Running 'gcloud auth application-default login'...${reset}"
-  # We use explicit scopes to prevent the "Scope has changed" crash
-  gcloud auth application-default login --no-launch-browser --scopes="https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/userinfo.email,openid"
-fi
-
 #########################################################################################################
 # Check if the configurations.tfvars file is created
 if [ -f "$CONFIG_FILE" ]; then
