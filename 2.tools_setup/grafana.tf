@@ -18,6 +18,31 @@ module "grafana-terraform-helm" {
   chart      = "grafana"
   repository = "https://grafana-community.github.io/helm-charts"
   values = [<<EOF
+
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+  path: /
+  pathType: Prefix
+
+  hosts:
+    - grafana.${var.dns_name}
+  ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
+  extraPaths: []
+  # - path: /*
+  #   pathType: Prefix
+  #   backend:
+  #     service:
+  #       name: ssl-redirect
+  #       port:
+  #         name: use-annotation
+
+
+
 EOF
   ]
 }
