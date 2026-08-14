@@ -97,9 +97,3 @@ variable "lets-encrypt-config" {
     chart_version   = "0.1.0"
   }
 }
-
-variable "lets-encrypt" {
-  description = "Deploy lets-encrypt or no?"
-  type        = bool
-  default     = false
-}
