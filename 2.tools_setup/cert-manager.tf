@@ -45,9 +45,5 @@ module "lets-encrypt" {
 email: "${var.email}"
 project_id: "${var.project_id}"
 google_domain_name: "${var.dns_name}"
-lab_subdomains:
-%{for s in var.lab_subdomains~}
-  - ${s}
-%{endfor~}
 EOF
 }
