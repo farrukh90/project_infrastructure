@@ -10,6 +10,12 @@ variable "project_id" {
   default     = ""
 }
 
+variable "gke_config" {
+  description = "Cluster configuration"
+  type        = map(any)
+  default     = {}
+}
+
 variable "ingress" {
   description = "Enable / Disable ingress service"
   type        = bool
