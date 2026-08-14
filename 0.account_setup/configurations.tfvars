@@ -42,3 +42,4 @@ node_locations = [
 ingress = true
 vault   = true
 grafana = true
+prometheus = true

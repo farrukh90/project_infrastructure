@@ -62,3 +62,18 @@ variable "grafana" {
   type        = bool
   default     = false
 }
+
+variable "prometheus-config" {
+  type        = map(any)
+  description = "Please define prometheus configurations"
+  default = {
+    deployment_name = "prometheus"
+    chart_version   = "29.23.1"
+  }
+}
+
+variable "prometheus" {
+  description = "Enable / Disable prometheus service"
+  type        = bool
+  default     = false
+}
