@@ -17,7 +17,7 @@ module "vault-terraform-helm" {
   namespace  = module.vault-ns[0].name
   chart      = "vault"
   repository = "https://helm.releases.hashicorp.com"
-  values_yaml = [<<EOF
+  values = [<<EOF
 # Add Vault configuration settings here
 
 global:
