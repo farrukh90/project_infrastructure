@@ -77,3 +77,29 @@ variable "prometheus" {
   type        = bool
   default     = false
 }
+
+# This block is used to setup cert-manager
+variable "cert-manager-config" {
+  type        = map(any)
+  description = "Please define cert-manager configurations"
+  default = {
+    deployment_name = "cert-manager"
+    chart_version   = "1.16.3"
+  }
+}
+
+# This block is used to setup lets-encrypt backup
+variable "lets-encrypt-config" {
+  type        = map(any)
+  description = "Please define lets-encrypt configurations"
+  default = {
+    deployment_name = "lets-encrypt"
+    chart_version   = "0.1.0"
+  }
+}
+
+variable "lets-encrypt" {
+  description = "Deploy lets-encrypt or no?"
+  type        = bool
+  default     = false
+}
