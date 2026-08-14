@@ -29,6 +29,12 @@ gke_config = {
   disk_type      = "pd-balanced"
 }
 
+node_locations = [
+  "us-central1-a",
+  "us-central1-b",
+  "us-central1-c",
+]
+
 
 #######################################
 #### Enable and disable services
