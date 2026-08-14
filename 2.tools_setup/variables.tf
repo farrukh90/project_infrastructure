@@ -34,9 +34,3 @@ variable "ingress-controller-config" {
     loadBalancerSourceRanges = "0.0.0.0/0"
   }
 }
-
-variable "vault" {
-  description = "Enable / Disable vault service"
-  type        = bool
-  default     = false
-}

@@ -12,14 +12,12 @@ module "vault-ns" {
 
 # Deploy Vault using Helm into the Vault namespace
 module "vault-terraform-helm" {
-  source = "farrukh90/release/helm"
-
-  deployment_name      = "vault"
-  deployment_namespace = module.vault-ns[0].name
-  chart                = "vault"
-  chart_version        = var.vault-config["chart_version"]
-  repository           = "https://helm.releases.hashicorp.com"
-  values_yaml          = <<EOF
+  source     = "farrukh90/appdeploy/helm"
+  name       = "vault"
+  namespace  = module.vault-ns[0].name
+  chart      = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  values_yaml = [<<EOF
 # Add Vault configuration settings here
 
 global:
@@ -65,4 +63,5 @@ server:
         hosts:
           - "vault.${var.dns_name}"
 EOF
+  ]
 }
