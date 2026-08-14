@@ -80,6 +80,6 @@ resource "kubernetes_manifest" "letsencrypt_prod" {
   }
 
   depends_on = [
-    helm_release.cert_manager
+    module.cert-mananger-terraform-helm
   ]
 }
