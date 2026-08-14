@@ -25,6 +25,13 @@ variable "vault-config" {
   }
 }
 
+variable "vault" {
+  description = "Enable / Disable vault service"
+  type        = bool
+  default     = false
+}
+
+
 variable "ingress-controller-config" {
   type        = map(any)
   description = "Please define ingress-controller configurations"
