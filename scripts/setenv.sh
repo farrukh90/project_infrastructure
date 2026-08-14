@@ -13,14 +13,20 @@ green=$(tput setaf 2)
 reset=$(tput sgr0)
 
 #########################################################################################################
-if [ "$GOOGLE_APPLICATION_CREDENTIALS" = "$HOME/.config/gcloud/application_default_credentials.json" ]; then
+# If GOOGLE_APPLICATION_CREDENTIALS is set but the file doesn't exist, unset it.
+# This prevents Terraform from trying to open a non-existent path.
+if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ] && [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+  echo "${red}Warning: GOOGLE_APPLICATION_CREDENTIALS points to a missing file: $GOOGLE_APPLICATION_CREDENTIALS${reset}"
   unset GOOGLE_APPLICATION_CREDENTIALS
 fi
 
+# Check for Application Default Credentials (ADC)
 if [ ! -f "$HOME/.config/gcloud/application_default_credentials.json" ]; then
   echo "${red}Application Default Credentials (ADC) not found.${reset}"
+  echo "${green}Terraform GCS backend requires ADC to authenticate in new terminals.${reset}"
   echo "${green}Running 'gcloud auth application-default login'...${reset}"
-  gcloud auth application-default login --no-launch-browser
+  # We use explicit scopes to prevent the "Scope has changed" crash
+  gcloud auth application-default login --no-launch-browser --scopes="https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/userinfo.email,openid"
 fi
 
 #########################################################################################################
