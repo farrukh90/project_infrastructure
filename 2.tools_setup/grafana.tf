@@ -25,23 +25,20 @@ ingress:
   ingressClassName: nginx
   annotations:
     kubernetes.io/ingress.class: nginx
-    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    acme.cert-manager.io/http01-edit-in-place: "true"
   path: /
   pathType: Prefix
 
   hosts:
     - grafana.${var.dns_name}
-  ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
-  extraPaths: []
-  # - path: /*
-  #   pathType: Prefix
-  #   backend:
-  #     service:
-  #       name: ssl-redirect
-  #       port:
-  #         name: use-annotation
 
-
+  tls:
+    - secretName: grafana-tls
+      hosts:
+        - grafana.${var.dns_name}
 
 EOF
   ]
