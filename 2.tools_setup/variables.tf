@@ -103,3 +103,11 @@ variable "lets-encrypt-config" {
     chart_version   = "0.1.0"
   }
 }
+
+#########################################
+# Set up a VPN service for the cluster
+#########################################
+variable "vpn" {
+  type    = bool
+  default = false
+}

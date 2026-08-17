@@ -43,3 +43,4 @@ ingress = true
 vault   = true
 grafana = true
 prometheus = true
+vpn = true
