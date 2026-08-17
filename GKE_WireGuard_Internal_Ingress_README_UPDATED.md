@@ -1,34 +1,34 @@
-# GKE Public + Private Ingress with WireGuard VPN
+**# GKE Public + Private Ingress with WireGuard VPN**
 
-## Goal
+**## Goal**
 
 Build a GKE architecture where normal applications can use a public
 NGINX Ingress, while private applications can use a second internal
 NGINX Ingress that is reachable from a laptop only through WireGuard.
 
-## Final Architecture
+**## Final Architecture**
 
-``` text
+\`\`\` text
                                       INTERNET
                                          |
               +--------------------------+--------------------------+
-              |                                                     |
-              | HTTPS                                               | UDP 51820
+              \|                                                     |
+              \| HTTPS                                               | UDP 51820
               v                                                     v
      Public GCP LoadBalancer                              WireGuard GCP LoadBalancer
         34.173.145.113                                        35.192.22.36
-              |                                                     |
+              \|                                                     |
               v                                                     v
      Public ingress-nginx                                      wireguard-udp
        IngressClass: nginx                                          |
-              |                                                     v
-              |                                                  wg-easy
-              |                                                wg0: 10.8.0.1
-              |                                                     ^
-              |                                                VPN tunnel
-              |                                                     |
-              |                                                   Laptop
-              |                                              10.8.0.2/32
+              \|                                                     v
+              \|                                                  wg-easy
+              \|                                                wg0: 10.8.0.1
+              \|                                                     ^
+              \|                                                VPN tunnel
+              \|                                                     |
+              \|                                                   Laptop
+              \|                                              10.8.0.2/32
               |
               +---------------------- public apps
 
@@ -43,26 +43,26 @@ NGINX Ingress that is reachable from a laptop only through WireGuard.
                                IngressClass: internal
                                          |
                               +----------+----------+
-                              |                     |
+                              \|                     |
                               v                     v
                            Grafana              Other private
                            Service                  Services
-                              |                     |
+                              \|                     |
                               v                     v
                             Pods                  Pods
-```
+\`\`\`
 
 Split tunnel:
 
-``` text
+\`\`\` text
 Normal Internet -----------------------------> normal Wi-Fi / ISP
 10.8.0.0/24 --------------------------------> WireGuard
 10.128.0.20/32 -----------------------------> WireGuard -> Internal Ingress
-```
+\`\`\`
 
-## DNS Layout
+**## DNS Layout**
 
-```text
+\`\`\` text
 vpn.awsprojectxconsulting.net
     -> Public NGINX Ingress
     -> wg-easy Web UI :51821
@@ -72,22 +72,22 @@ wg.awsprojectxconsulting.net
     -> GCP UDP LoadBalancer :51820
     -> wg-easy
 
-When VPN is disabled:
-
-grafana.awsprojectxconsulting.net
-    -> Public ingress-nginx
-    -> Public LoadBalancer
-
-When VPN is enabled:
-
 internal-grafana.awsprojectxconsulting.net
-    -> 10.128.0.20
+    -> 10.128.0.20 when VPN/private mode is enabled
     -> Internal ingress-nginx
     -> Grafana
+\`\`\`
 
-## 1. VPN Namespace
+A cleaner future design is:
 
-``` hcl
+\`\`\` text
+Public zone:  awsprojectxconsulting.net
+Private zone: internal.awsprojectxconsulting.net
+\`\`\`
+
+**## 1. VPN Namespace**
+
+\`\`\` hcl
 module "vpn-ns" {
   source = "farrukh90/ns/kubernetes"
   count  = var.vpn ? 1 : 0
@@ -102,56 +102,56 @@ module "vpn-ns" {
     managedby = "terraform"
   }
 }
-```
+\`\`\`
 
-## 2. Generate and Store the wg-easy Admin Password
+**## 2. Generate and Store the wg-easy Admin Password**
 
-``` hcl
-resource "random_password" "wireguard_admin_password" {
+\`\`\` hcl
+resource "random\_password" "wireguard\_admin\_password" {
   count   = var.vpn ? 1 : 0
   length  = 24
   special = false
 }
 
-resource "google_secret_manager_secret" "wireguard_admin_password" {
+resource "google\_secret\_manager\_secret" "wireguard\_admin\_password" {
   count     = var.vpn ? 1 : 0
-  secret_id = "wireguard-admin-password"
+  secret\_id = "wireguard-admin-password"
 
   replication {
     auto {}
   }
 }
 
-resource "google_secret_manager_secret_version" "wireguard_admin_password" {
+resource "google\_secret\_manager\_secret\_version" "wireguard\_admin\_password" {
   count       = var.vpn ? 1 : 0
-  secret      = google_secret_manager_secret.wireguard_admin_password[0].id
-  secret_data = random_password.wireguard_admin_password[0].result
+  secret      = google\_secret\_manager\_secret.wireguard\_admin\_password[0].id
+  secret\_data = random\_password.wireguard\_admin\_password[0].result
 }
 
-data "google_secret_manager_secret_version" "wireguard_admin_password" {
+data "google\_secret\_manager\_secret\_version" "wireguard\_admin\_password" {
   count   = var.vpn ? 1 : 0
-  project = var.project_id
-  secret  = google_secret_manager_secret.wireguard_admin_password[0].secret_id
+  project = var.project\_id
+  secret  = google\_secret\_manager\_secret.wireguard\_admin\_password[0].secret\_id
 
-  depends_on = [
-    google_secret_manager_secret_version.wireguard_admin_password
+  depends\_on = [
+    google\_secret\_manager\_secret\_version.wireguard\_admin\_password
   ]
 }
-```
+\`\`\`
 
 Retrieve it with:
 
-``` bash
-gcloud secrets versions access latest --secret="wireguard-admin-password" --project="$GOOGLE_CLOUD_PROJECT"
-```
+\`\`\` bash
+gcloud secrets versions access latest --secret="wireguard-admin-password" --project="$GOOGLE\_CLOUD\_PROJECT"
+\`\`\`
 
-## 3. Deploy wg-easy
+**## 3. Deploy wg-easy**
 
-We first tested `wg-access-server`, but its old Helm chart rendered
-`networking.k8s.io/v1beta1` Ingress objects. Modern GKE rejected that
-API, so we switched to `wg-easy`.
+We first tested \`wg-access-server\`, but its old Helm chart rendered
+\`networking.k8s.io/v1beta1\` Ingress objects. Modern GKE rejected that
+API, so we switched to \`wg-easy\`.
 
-``` hcl
+\`\`\` hcl
 module "wireguard-terraform-helm" {
   source = "farrukh90/appdeploy/helm"
   count  = var.vpn ? 1 : 0
@@ -159,26 +159,26 @@ module "wireguard-terraform-helm" {
   name       = "wireguard"
   namespace  = module.vpn-ns[0].name
   chart      = "wg-easy"
-  repository = "https://raw.githubusercontent.com/hansehe/wg-easy-helm/master/helm/charts"
+  repository = "https\://raw\.githubusercontent.com/hansehe/wg-easy-helm/master/helm/charts"
 
-  values = [<<EOF
+  values = [<\<EOF
 
 environmentVariables:
   INSECURE: "true"
-  DISABLE_IPV6: "true"
-  INIT_ENABLED: "true"
-  INIT_USERNAME: "admin"
-  INIT_PASSWORD: "${trimspace(data.google_secret_manager_secret_version.wireguard_admin_password[0].secret_data)}"
-  INIT_HOST: "wg.${var.dns_name}"
-  INIT_PORT: "51820"
+  DISABLE\_IPV6: "true"
+  INIT\_ENABLED: "true"
+  INIT\_USERNAME: "admin"
+  INIT\_PASSWORD: "${trimspace(data.google\_secret\_manager\_secret\_version.wireguard\_admin\_password[0].secret\_data)}"
+  INIT\_HOST: "wg.${var.dns\_name}"
+  INIT\_PORT: "51820"
 
 securityContext:
   privileged: true
   allowPrivilegeEscalation: true
   capabilities:
     add:
-      - NET_ADMIN
-      - SYS_MODULE
+      \- NET\_ADMIN
+      \- SYS\_MODULE
 
 service:
   type: ClusterIP
@@ -190,14 +190,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
-    - host: vpn.${var.dns_name}
+    \- host: vpn.${var.dns\_name}
       paths:
-        - path: /
+        \- path: /
           pathType: Prefix
   tls:
-    - secretName: wireguard-web-tls
+    \- secretName: wireguard-web-tls
       hosts:
-        - vpn.${var.dns_name}
+        \- vpn.${var.dns\_name}
 
 volume:
   enabled: true
@@ -206,39 +206,39 @@ volume:
 EOF
   ]
 }
-```
+\`\`\`
 
-### IPv6 Fix
+**### IPv6 Fix**
 
-`wg0` initially failed with:
+\`wg0\` initially failed with:
 
-``` text
+\`\`\` text
 Error: ipv6: IPv6 is disabled on this device.
-```
+\`\`\`
 
 The fix was:
 
-``` yaml
-DISABLE_IPV6: "true"
-```
+\`\`\` yaml
+DISABLE\_IPV6: "true"
+\`\`\`
 
 Verify:
 
-``` bash
+\`\`\` bash
 POD=$(kubectl get pod -n vpn -o jsonpath='{.items[0].metadata.name}')
 kubectl exec -n vpn "$POD" -- ip link show wg0
-```
+\`\`\`
 
-## 4. Separate UDP 51820 from the Web UI
+**## 4. Separate UDP 51820 from the Web UI**
 
-GKE rejected one LoadBalancer containing both `51820/UDP` and
-`51821/TCP`.
+GKE rejected one LoadBalancer containing both \`51820/UDP\` and
+\`51821/TCP\`.
 
-The Helm Service stays `ClusterIP`. A separate UDP-only LoadBalancer
+The Helm Service stays \`ClusterIP\`. A separate UDP-only LoadBalancer
 exposes WireGuard:
 
-``` hcl
-resource "kubernetes_service_v1" "wireguard_udp" {
+\`\`\` hcl
+resource "kubernetes\_service\_v1" "wireguard\_udp" {
   count = var.vpn ? 1 : 0
 
   metadata {
@@ -246,7 +246,7 @@ resource "kubernetes_service_v1" "wireguard_udp" {
     namespace = module.vpn-ns[0].name
 
     annotations = {
-      "external-dns.alpha.kubernetes.io/hostname" = "wg.${var.dns_name}"
+      "external-dns.alpha.kubernetes.io/hostname" = "wg.${var.dns\_name}"
     }
   }
 
@@ -259,41 +259,41 @@ resource "kubernetes_service_v1" "wireguard_udp" {
     port {
       name        = "wireguard"
       port        = 51820
-      target_port = 51820
+      target\_port = 51820
       protocol    = "UDP"
     }
 
     type = "LoadBalancer"
   }
 
-  depends_on = [
+  depends\_on = [
     module.wireguard-terraform-helm
   ]
 }
-```
+\`\`\`
 
 Observed public WireGuard endpoint:
 
-``` text
+\`\`\` text
 35.192.22.36:51820/UDP
-```
+\`\`\`
 
-## 5. WireGuard Client
+**## 5. WireGuard Client**
 
 Use the WireGuard client, not OpenVPN.
 
 The generated profile initially used:
 
-``` ini
+\`\`\` ini
 AllowedIPs = 0.0.0.0/0, ::/0
-```
+\`\`\`
 
 That created a full tunnel and caused the laptop to lose normal Internet
 access.
 
 We changed it to split tunneling:
 
-``` ini
+\`\`\` ini
 [Interface]
 Address = 10.8.0.2/32
 DNS = 1.1.1.1
@@ -303,33 +303,33 @@ MTU = 1420
 AllowedIPs = 10.8.0.0/24, 10.128.0.20/32
 Endpoint = 35.192.22.36:51820
 PersistentKeepalive = 25
-```
+\`\`\`
 
 After DNS is stable, the endpoint can be:
 
-``` ini
+\`\`\` ini
 Endpoint = wg.awsprojectxconsulting.net:51820
-```
+\`\`\`
 
-## 6. Verify WireGuard
+**## 6. Verify WireGuard**
 
-``` bash
+\`\`\` bash
 POD=$(kubectl get pod -n vpn -o jsonpath='{.items[0].metadata.name}')
 kubectl exec -n vpn "$POD" -- wg
-```
+\`\`\`
 
 Success includes:
 
-``` text
+\`\`\` text
 latest handshake: ...
 transfer: ...
-```
+\`\`\`
 
-## 7. Internal Ingress Controller
+**## 7. Internal Ingress Controller**
 
 The internal ingress is part of the VPN/private-access feature:
 
-``` hcl
+\`\`\` hcl
 module "internal-ingress-ns" {
   source = "farrukh90/ns/kubernetes"
   count  = var.vpn ? 1 : 0
@@ -343,9 +343,9 @@ module "internal-ingress-ns" {
     managedby = "terraform"
   }
 }
-```
+\`\`\`
 
-``` hcl
+\`\`\` hcl
 module "internal-ingress-terraform-helm" {
   source = "farrukh90/appdeploy/helm"
   count  = var.vpn ? 1 : 0
@@ -353,9 +353,9 @@ module "internal-ingress-terraform-helm" {
   name       = "internal-ingress"
   namespace  = module.internal-ingress-ns[0].name
   chart      = "ingress-nginx"
-  repository = "https://kubernetes.github.io/ingress-nginx"
+  repository = "https\://kubernetes.github.io/ingress-nginx"
 
-  values = [<<EOF
+  values = [<\<EOF
 controller:
   allowSnippetAnnotations: true
   replicaCount: 2
@@ -379,39 +379,39 @@ controller:
 EOF
   ]
 }
-```
+\`\`\`
 
 Observed internal LB:
 
-``` text
+\`\`\` text
 10.128.0.20
-```
+\`\`\`
 
-## 8. Test Internal Ingress
+**## 8. Test Internal Ingress**
 
 From the VPN-connected laptop:
 
-``` bash
-curl -v http://10.128.0.20
-```
+\`\`\` bash
+curl -v http\://10.128.0.20
+\`\`\`
 
-An NGINX `404 Not Found` is a successful networking test. It proves:
+An NGINX \`404 Not Found\` is a successful networking test. It proves:
 
-``` text
+\`\`\` text
 Laptop -> WireGuard -> GKE -> Internal LoadBalancer -> internal ingress-nginx
-```
+\`\`\`
 
-## 9. Switch Grafana Based on `var.vpn`
+**## 9. Switch Grafana Based on \`var.vpn\`**
 
 One Grafana deployment can dynamically select the controller:
 
-``` hcl
+\`\`\` hcl
 ingressClassName: ${var.vpn ? "internal" : "nginx"}
-```
+\`\`\`
 
 Example:
 
-``` hcl
+\`\`\` hcl
 ingress:
   enabled: true
   ingressClassName: ${var.vpn ? "internal" : "nginx"}
@@ -423,107 +423,98 @@ ingress:
     acme.cert-manager.io/http01-edit-in-place: "true"
 
   hosts:
-    - grafana.${var.dns_name}
+    \- grafana.${var.dns\_name}
 
   tls:
-    - secretName: grafana-tls
+    \- secretName: grafana-tls
       hosts:
-        - grafana.${var.dns_name}
-```
+        \- grafana.${var.dns\_name}
+\`\`\`
 
 Behavior:
 
-``` text
+\`\`\` text
 vpn = false -> nginx    -> public LB
 vpn = true  -> internal -> private LB -> VPN required
-```
+\`\`\`
 
-## 10. ExternalDNS
+**## 10. ExternalDNS**
 
-ExternalDNS automatically changed Grafana from the public address to the
-private address:
+ExternalDNS uses the existing public Cloud DNS zone for both public endpoints
+and records that point to private IP addresses.
+
+When VPN is disabled:
 
 ``` text
-OLD: grafana.awsprojectxconsulting.net -> 34.173.145.113
-NEW: grafana.awsprojectxconsulting.net -> 10.128.0.20
+internal-grafana.awsprojectxconsulting.net -> 34.173.145.113
 ```
 
-Verify:
+When VPN is enabled:
+
+``` text
+internal-internal-grafana.awsprojectxconsulting.net -> 10.128.0.20
+```
+
+This is intentional for the lab. Students can verify DNS publicly with:
 
 ``` bash
-dig +short grafana.awsprojectxconsulting.net
+dig +short internal-internal-grafana.awsprojectxconsulting.net
+nslookup internal-internal-grafana.awsprojectxconsulting.net
 ```
 
-In private mode:
+A successful DNS lookup does not mean the private IP is reachable. Without
+WireGuard there is no route to `10.128.0.20`; with WireGuard the route exists.
 
-``` text
-10.128.0.20
-```
-
-## 11. End-to-End Grafana Test
+**## 11. End-to-End Grafana Test**
 
 Host-routing test:
 
-``` bash
-curl -v -H "Host: grafana.awsprojectxconsulting.net" http://10.128.0.20
-```
+\`\`\` bash
+curl -v -H "Host: internal-grafana.awsprojectxconsulting.net" http\://10.128.0.20
+\`\`\`
 
 Observed:
 
-``` text
+\`\`\` text
 308 Permanent Redirect
-Location: https://grafana.awsprojectxconsulting.net
-```
+Location: https\://internal-grafana.awsprojectxconsulting.net
+\`\`\`
 
 HTTPS test:
 
-``` bash
-curl -vk https://grafana.awsprojectxconsulting.net
-```
+\`\`\` bash
+curl -vk https\://internal-grafana.awsprojectxconsulting.net
+\`\`\`
 
 Observed:
 
-``` text
+\`\`\` text
 IPv4: 10.128.0.20
 SSL certificate verify ok
 HTTP/2 302
 location: /login
-```
+\`\`\`
 
 With WireGuard disconnected, Grafana became unavailable. That is the
 intended behavior.
 
-## 12. cert-manager
+**## 12. cert-manager**
 
 The existing Let's Encrypt certificate remained valid.
 
 For a long-term private-only hostname, DNS-01 is preferable to HTTP-01
-because a public ACME server cannot directly reach a private `10.x.x.x`
+because a public ACME server cannot directly reach a private \`10.x.x.x\`
 load balancer.
 
-## 13. Optional Private Cloud DNS Zone
+**## 13. Public DNS with Private IP Addresses**
 
-The cluster uses the default VPC:
+For this lab, keep only the existing public Google Cloud DNS zone:
 
 ``` hcl
-data "google_compute_network" "default" {
-  name    = "default"
-  project = var.project_id
-}
-
-resource "google_dns_managed_zone" "internal" {
-  count = var.vpn ? 1 : 0
-
-  name        = "internal"
-  dns_name    = "internal.${var.dns_name}."
-  description = "Private DNS zone for internal applications"
-  visibility  = "private"
-
-  private_visibility_config {
-    networks {
-      network_url = data.google_compute_network.default.id
-    }
-  }
+resource "google_dns_managed_zone" "project" {
+  name        = "project"
+  dns_name    = "${var.dns_name}."
+  description = "Used for project"
 
   labels = {
     managed_by = "terraform"
@@ -531,35 +522,95 @@ resource "google_dns_managed_zone" "internal" {
 }
 ```
 
-Important: `DNS = 1.1.1.1` cannot resolve a Google Cloud private DNS
-zone. Before moving internal records exclusively to the private zone,
-provide VPN clients a DNS resolver that can query that zone.
+Example records:
 
-## 14. Terraform State Lesson
+``` text
+wg.awsprojectxconsulting.net                  -> 35.192.22.36
+internal-internal-grafana.awsprojectxconsulting.net   -> 10.128.0.20
+internal-prometheus.awsprojectxconsulting.net -> 10.128.0.20
+internal-vault.awsprojectxconsulting.net     -> 10.128.0.20
+```
 
-Adding `count` changes an existing module address.
+Publishing a private IP in public DNS does not expose the application.
+WireGuard still provides the required private route.
+
+**## Conditional Prometheus Ingress**
+
+``` yaml
+server:
+  ingress:
+    enabled: true
+    ingressClassName: ${var.vpn ? "internal" : "nginx"}
+
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      acme.cert-manager.io/http01-edit-in-place: "true"
+
+    hosts:
+      - ${var.vpn ? "internal-prometheus" : "prometheus"}.${var.dns_name}
+
+    tls:
+      - secretName: ${var.vpn ? "internal-prometheus-tls" : "prometheus-tls"}
+        hosts:
+          - ${var.vpn ? "internal-prometheus" : "prometheus"}.${var.dns_name}
+```
+
+**## Conditional Vault Ingress**
+
+``` yaml
+ingress:
+  enabled: true
+  ingressClassName: ${var.vpn ? "internal" : "nginx"}
+
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    acme.cert-manager.io/http01-edit-in-place: "true"
+
+  hosts:
+    - host: "${var.vpn ? "internal-vault" : "vault"}.${var.dns_name}"
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200
+
+  tls:
+    - secretName: ${var.vpn ? "internal-vault-tls" : "vault-tls"}
+      hosts:
+        - "${var.vpn ? "internal-vault" : "vault"}.${var.dns_name}"
+```
+
+**## 14. Terraform State Lesson**
+
+Adding \`count\` changes an existing module address.
 
 Before:
 
-``` text
-module.ingress-terraform-helm.helm_release.this
-```
+\`\`\` text
+module.ingress-terraform-helm.helm\_release.this
+\`\`\`
 
 After:
 
-``` text
-module.ingress-terraform-helm[0].helm_release.this
-```
+\`\`\` text
+module.ingress-terraform-helm[0].helm\_release.this
+\`\`\`
 
 Move the state instead of destroying/recreating:
 
-``` bash
-terraform state mv   'module.ingress-terraform-helm.helm_release.this'   'module.ingress-terraform-helm[0].helm_release.this'
-```
+\`\`\` bash
+terraform state mv   'module.ingress-terraform-helm.helm\_release.this'   'module.ingress-terraform-helm[0].helm\_release.this'
+\`\`\`
 
-## 15. Useful Commands
+**## 15. Useful Commands**
 
-``` bash
+\`\`\` bash
 kubectl get pods -n vpn -o wide
 kubectl get svc -n vpn -o wide
 kubectl get ingress -n vpn
@@ -576,15 +627,15 @@ kubectl get ingress -n grafana -o wide
 kubectl describe ingress -n grafana grafana
 
 dig +short wg.awsprojectxconsulting.net
-dig +short grafana.awsprojectxconsulting.net
+dig +short internal-grafana.awsprojectxconsulting.net
 
-curl -v http://10.128.0.20
-curl -vk https://grafana.awsprojectxconsulting.net
-```
+curl -v http\://10.128.0.20
+curl -vk https\://internal-grafana.awsprojectxconsulting.net
+\`\`\`
 
-## 16. Mental Model
+**## 16. Mental Model**
 
-``` text
+\`\`\` text
 DNS
  -> tells the client which IP to use
 
@@ -611,20 +662,20 @@ ExternalDNS
 
 cert-manager
  -> manages TLS certificates
-```
+\`\`\`
 
-## Result
+**## Result**
 
 The completed design provides:
 
-``` text
+\`\`\` text
 Public apps  -> Public ingress-nginx -> Internet
 Private apps -> Internal ingress-nginx -> WireGuard required
-```
+\`\`\`
 
 Grafana was successfully tested through:
 
-``` text
+\`\`\` text
 Laptop
  -> WireGuard
  -> 10.128.0.20
@@ -632,4 +683,4 @@ Laptop
  -> Grafana Service
  -> Grafana Pod
  -> HTTPS /login
-```
+\`\`\`
