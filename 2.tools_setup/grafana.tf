@@ -27,8 +27,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     ingress.kubernetes.io/ssl-redirect: "false"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    acme.cert-manager.io/http01-edit-in-place: "true"
+    cert-manager.io/cluster-issuer: ${var.vpn ? "letsencrypt-internal" : "letsencrypt-prod"}
   path: /
   pathType: Prefix
 

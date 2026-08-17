@@ -419,9 +419,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     ingress.kubernetes.io/ssl-redirect: "false"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    acme.cert-manager.io/http01-edit-in-place: "true"
-
+    cert-manager.io/cluster-issuer: ${var.vpn ? "letsencrypt-internal" : "letsencrypt-prod"}
   hosts:
     - grafana.${var.dns_name}
 
@@ -543,9 +541,7 @@ server:
     ingressClassName: ${var.vpn ? "internal" : "nginx"}
 
     annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-      acme.cert-manager.io/http01-edit-in-place: "true"
-
+      cert-manager.io/cluster-issuer: ${var.vpn ? "letsencrypt-internal" : "letsencrypt-prod"}
     hosts:
       - ${var.vpn ? "internal-prometheus" : "prometheus"}.${var.dns_name}
 
@@ -565,8 +561,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     ingress.kubernetes.io/ssl-redirect: "false"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    acme.cert-manager.io/http01-edit-in-place: "true"
+    cert-manager.io/cluster-issuer: ${var.vpn ? "letsencrypt-internal" : "letsencrypt-prod"}
 
   hosts:
     - host: "${var.vpn ? "internal-vault" : "vault"}.${var.dns_name}"
