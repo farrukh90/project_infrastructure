@@ -20,9 +20,11 @@ module "prometheus-terraform-helm" {
   repository = "https://prometheus-community.github.io/helm-charts"
 
   values = [<<EOF
+  
 server:
   ingress:
     enabled: true
+
     ingressClassName: ${var.vpn ? "internal" : "nginx"}
 
     annotations:
@@ -30,12 +32,12 @@ server:
       acme.cert-manager.io/http01-edit-in-place: "true"
 
     hosts:
-      - prometheus.${var.dns_name}
+      - ${var.vpn ? "internal-prometheus" : "prometheus"}.${var.dns_name}
 
     tls:
-      - secretName: prometheus-tls
+      - secretName: ${var.vpn ? "internal-prometheus-tls" : "prometheus-tls"}
         hosts:
-          - prometheus.${var.dns_name}
+          - ${var.vpn ? "internal-prometheus" : "prometheus"}.${var.dns_name}
 EOF
   ]
 }

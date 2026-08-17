@@ -62,7 +62,7 @@ Normal Internet -----------------------------> normal Wi-Fi / ISP
 
 ## DNS Layout
 
-``` text
+```text
 vpn.awsprojectxconsulting.net
     -> Public NGINX Ingress
     -> wg-easy Web UI :51821
@@ -72,18 +72,18 @@ wg.awsprojectxconsulting.net
     -> GCP UDP LoadBalancer :51820
     -> wg-easy
 
+When VPN is disabled:
+
 grafana.awsprojectxconsulting.net
-    -> 10.128.0.20 when VPN/private mode is enabled
+    -> Public ingress-nginx
+    -> Public LoadBalancer
+
+When VPN is enabled:
+
+internal-grafana.awsprojectxconsulting.net
+    -> 10.128.0.20
     -> Internal ingress-nginx
     -> Grafana
-```
-
-A cleaner future design is:
-
-``` text
-Public zone:  awsprojectxconsulting.net
-Private zone: internal.awsprojectxconsulting.net
-```
 
 ## 1. VPN Namespace
 

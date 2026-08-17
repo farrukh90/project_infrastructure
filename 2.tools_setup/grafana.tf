@@ -32,13 +32,12 @@ ingress:
   pathType: Prefix
 
   hosts:
-    - grafana.${var.dns_name}
+    - ${var.vpn ? "internal-grafana" : "grafana"}.${var.dns_name}
 
   tls:
-    - secretName: grafana-tls
+    - secretName: ${var.vpn ? "internal-grafana-tls" : "grafana-tls"}
       hosts:
-        - grafana.${var.dns_name}
-
+        - ${var.vpn ? "internal-grafana" : "grafana"}.${var.dns_name}
 EOF
   ]
 }

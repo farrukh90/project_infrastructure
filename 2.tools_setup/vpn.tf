@@ -243,28 +243,3 @@ controller:
 EOF
   ]
 }
-
-data "google_compute_network" "default" {
-  name    = "default"
-  project = var.project_id
-}
-
-resource "google_dns_managed_zone" "internal" {
-  count = var.vpn ? 1 : 0
-
-  name        = "internal"
-  dns_name    = "internal.${var.dns_name}."
-  description = "Private DNS zone for internal applications"
-
-  visibility = "private"
-
-  private_visibility_config {
-    networks {
-      network_url = data.google_compute_network.default.id
-    }
-  }
-
-  labels = {
-    managed_by = "terraform"
-  }
-}

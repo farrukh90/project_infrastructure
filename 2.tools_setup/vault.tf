@@ -40,28 +40,28 @@ server:
 
   ingress:
     enabled: true
+    ingressClassName: ${var.vpn ? "internal" : "nginx"}
     annotations:
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
       ingress.kubernetes.io/ssl-redirect: "false"
       cert-manager.io/cluster-issuer: letsencrypt-prod
       acme.cert-manager.io/http01-edit-in-place: "true"
-    ingressClassName: ${var.vpn ? "internal" : "nginx"}
     hosts:
-    - host: "vault.${var.dns_name}"
-      http:
-        paths:
-        - pathType: Prefix
-          path: "/"
-          backend:
-            service:
-              name: vault
-              port:
-                number: 8200
+      - host: "${var.vpn ? "internal-vault" : "vault"}.${var.dns_name}"
+        http:
+          paths:
+            - pathType: Prefix
+              path: "/"
+              backend:
+                service:
+                  name: vault
+                  port:
+                    number: 8200
 
     tls:
-      - secretName: vault-tls
+      - secretName: ${var.vpn ? "internal-vault-tls" : "vault-tls"}
         hosts:
-          - "vault.${var.dns_name}"
+          - "${var.vpn ? "internal-vault" : "vault"}.${var.dns_name}"
 EOF
   ]
 }
