@@ -45,7 +45,7 @@ server:
       ingress.kubernetes.io/ssl-redirect: "false"
       cert-manager.io/cluster-issuer: letsencrypt-prod
       acme.cert-manager.io/http01-edit-in-place: "true"
-    ingressClassName: "nginx"
+    ingressClassName: ${var.vpn ? "internal" : "nginx"}
     hosts:
     - host: "vault.${var.dns_name}"
       http:

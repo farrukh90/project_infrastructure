@@ -23,17 +23,7 @@ resource "random_password" "wireguard_admin_password" {
 }
 
 
-# Create Google Secret Manager secret container
-resource "google_secret_manager_secret" "wireguard_private_key" {
-  count     = var.vpn ? 1 : 0
-  secret_id = "wireguard-private-key"
-
-  replication {
-    auto {}
-  }
-}
-
-
+# Store admin password in Google Secret Manager
 resource "google_secret_manager_secret" "wireguard_admin_password" {
   count     = var.vpn ? 1 : 0
   secret_id = "wireguard-admin-password"
@@ -42,6 +32,7 @@ resource "google_secret_manager_secret" "wireguard_admin_password" {
     auto {}
   }
 }
+
 
 resource "google_secret_manager_secret_version" "wireguard_admin_password" {
   count       = var.vpn ? 1 : 0
@@ -61,67 +52,37 @@ data "google_secret_manager_secret_version" "wireguard_admin_password" {
   ]
 }
 
-# Install wg if needed and generate/store private key
-# ONLY if Secret Manager does not already contain one
-resource "null_resource" "wireguard_setup" {
+resource "kubernetes_service_v1" "wireguard_udp" {
   count = var.vpn ? 1 : 0
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
+  metadata {
+    name      = "wireguard-udp"
+    namespace = module.vpn-ns[0].name
+    annotations = {
+      "external-dns.alpha.kubernetes.io/hostname" = "wg.${var.dns_name}"
+    }
+  }
 
-      SECRET_NAME="wireguard-private-key"
-      PROJECT_ID="${var.project_id}"
+  spec {
+    selector = {
+      "app.kubernetes.io/instance" = "wireguard"
+      "app.kubernetes.io/name"     = "wg-easy"
+    }
 
-      if ! command -v wg >/dev/null 2>&1; then
-        echo "wg not found. Installing wireguard-tools..."
+    port {
+      name        = "wireguard"
+      port        = 51820
+      target_port = 51820
+      protocol    = "UDP"
+    }
 
-        sudo apt-get update
-        sudo apt-get install -y wireguard-tools
-      else
-        echo "wg is already installed."
-      fi
-
-      if gcloud secrets versions access latest \
-        --secret="$SECRET_NAME" \
-        --project="$PROJECT_ID" >/dev/null 2>&1; then
-
-        echo "WireGuard private key already exists in Secret Manager."
-
-      else
-
-        echo "Generating WireGuard private key..."
-
-        wg genkey | \
-        gcloud secrets versions add "$SECRET_NAME" \
-          --project="$PROJECT_ID" \
-          --data-file=-
-
-        echo "WireGuard private key stored in Secret Manager."
-      fi
-    EOT
+    type = "LoadBalancer"
   }
 
   depends_on = [
-    google_secret_manager_secret.wireguard_private_key
+    module.wireguard-terraform-helm
   ]
 }
-
-
-
-# Read private key from Google Secret Manager
-
-data "google_secret_manager_secret_version" "wireguard_private_key" {
-  count = var.vpn ? 1 : 0
-
-  project = var.project_id
-  secret  = google_secret_manager_secret.wireguard_private_key[0].secret_id
-
-  depends_on = [
-    null_resource.wireguard_setup
-  ]
-}
-
 
 module "wireguard-terraform-helm" {
   source = "farrukh90/appdeploy/helm"
@@ -129,49 +90,181 @@ module "wireguard-terraform-helm" {
 
   name       = "wireguard"
   namespace  = module.vpn-ns[0].name
-  chart      = "wg-access-server"
-  repository = "https://place1.github.io/wg-access-server"
+  chart      = "wg-easy"
+  repository = "https://raw.githubusercontent.com/hansehe/wg-easy-helm/master/helm/charts"
 
   values = [<<EOF
 
-web:
-  config:
-    adminUsername: admin
-    adminPassword: "${trimspace(data.google_secret_manager_secret_version.wireguard_admin_password[0].secret_data)}"
+environmentVariables:
+  INSECURE: "true"
+  DISABLE_IPV6: "true"
+  INIT_ENABLED: "true"
+  INIT_USERNAME: "admin"
+  INIT_PASSWORD: "${trimspace(data.google_secret_manager_secret_version.wireguard_admin_password[0].secret_data)}"
+  INIT_HOST: "wg.${var.dns_name}"
+  INIT_PORT: "51820"
 
-wireguard:
-  config:
-    privateKey: "${trimspace(data.google_secret_manager_secret_version.wireguard_private_key[0].secret_data)}"
+securityContext:
+  privileged: true
+  allowPrivilegeEscalation: true
+  capabilities:
+    add:
+      - NET_ADMIN
+      - SYS_MODULE
 
-  service:
-    type: LoadBalancer
-
-persistence:
-  enabled: true
-  size: 1Gi
+service:
+  type: ClusterIP
+  port: 51821
 
 ingress:
   enabled: true
+  className: nginx
 
   annotations:
-    kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
 
   hosts:
-    - vpn.${var.dns_name}
+    - host: vpn.${var.dns_name}
+      paths:
+        - path: /
+          pathType: Prefix
 
   tls:
     - secretName: wireguard-web-tls
       hosts:
         - vpn.${var.dns_name}
 
+volume:
+  enabled: true
+  size: 1Gi
+
 EOF
   ]
 
-    depends_on = [
-    null_resource.wireguard_setup,
-    google_secret_manager_secret_version.wireguard_admin_password,
-    module.vpn-ns
-    ]
+  depends_on = [
+    google_secret_manager_secret_version.wireguard_admin_password
+  ]
+}
 
+
+module "internal-ingress-ns" {
+  source = "farrukh90/ns/kubernetes"
+  count  = var.vpn ? 1 : 0
+  name   = "internal-ingress"
+  annotations = {
+    application = "internal-ingress"
+  }
+  labels = {
+    managedby = "terraform"
+  }
+}
+
+
+module "internal-ingress-terraform-helm" {
+  source     = "farrukh90/appdeploy/helm"
+  count      = var.vpn ? 1 : 0
+  name       = "internal-ingress"
+  namespace  = module.internal-ingress-ns[0].name
+  chart      = "ingress-nginx"
+  repository = "https://kubernetes.github.io/ingress-nginx"
+
+  values = [<<EOF
+controller:
+
+  allowSnippetAnnotations: true
+
+  replicaCount: 2
+
+  minReadySeconds: 5
+
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
+
+  ingressClassResource:
+    name: internal
+    enabled: true
+    default: false
+    controllerValue: k8s.io/internal-ingress-nginx
+
+  ingressClass: internal
+
+  electionID: internal-ingress-controller-leader
+
+  admissionWebhooks:
+    createSecretJob:
+      resources:
+        limits:
+          cpu: 250m
+          memory: 500Mi
+        requests:
+          cpu: 100m
+          memory: 90Mi
+
+    patchWebhookJob:
+      resources:
+        limits:
+          cpu: 250m
+          memory: 500Mi
+        requests:
+          cpu: 100m
+          memory: 90Mi
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 500Mi
+    requests:
+      cpu: 100m
+      memory: 90Mi
+
+  service:
+    create: true
+    type: LoadBalancer
+
+    annotations:
+      networking.gke.io/load-balancer-type: "Internal"
+
+EOF
+  ]
+}
+
+data "google_compute_network" "default" {
+  name    = "default"
+  project = var.project_id
+}
+
+resource "google_dns_managed_zone" "internal" {
+  count = var.vpn ? 1 : 0
+
+  name        = "internal"
+  dns_name    = "internal.${var.dns_name}."
+  description = "Private DNS zone for internal applications"
+
+  visibility = "private"
+
+  private_visibility_config {
+    networks {
+      network_url = data.google_compute_network.default.id
+    }
+  }
+
+  labels = {
+    managed_by = "terraform"
+  }
 }

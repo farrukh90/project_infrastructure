@@ -23,10 +23,9 @@ module "prometheus-terraform-helm" {
 server:
   ingress:
     enabled: true
-    ingressClassName: nginx
+    ingressClassName: ${var.vpn ? "internal" : "nginx"}
 
     annotations:
-      kubernetes.io/ingress.class: nginx
       cert-manager.io/cluster-issuer: letsencrypt-prod
       acme.cert-manager.io/http01-edit-in-place: "true"
 

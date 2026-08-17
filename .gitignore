@@ -44,3 +44,4 @@ bin/vault
 1.cluster_setup/.terraform.lock.hcl
 1.cluster_setup/backend.tf
 2.tools_setup/.terraform.lock.hcl
+2.tools_setup/.terraform.lock.hcl

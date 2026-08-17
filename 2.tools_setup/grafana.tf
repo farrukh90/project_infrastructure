@@ -22,9 +22,8 @@ module "grafana-terraform-helm" {
 
 ingress:
   enabled: true
-  ingressClassName: nginx
+  ingressClassName: ${var.vpn ? "internal" : "nginx"}
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     ingress.kubernetes.io/ssl-redirect: "false"
     cert-manager.io/cluster-issuer: letsencrypt-prod

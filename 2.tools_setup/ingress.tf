@@ -15,6 +15,7 @@ module "ingress-ns" {
 #Terraform module for deploying an Ingress controller using Helm
 module "ingress-terraform-helm" {
   source     = "farrukh90/appdeploy/helm"
+  count      = var.ingress ? 1 : 0
   name       = "ingress"
   namespace  = module.ingress-ns[0].name
   chart      = "ingress-nginx"
@@ -83,3 +84,4 @@ controller:
   EOF
   ]
 }
+
