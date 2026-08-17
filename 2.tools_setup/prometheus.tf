@@ -14,6 +14,7 @@ module "prometheus-ns" {
 
 module "prometheus-terraform-helm" {
   source     = "farrukh90/appdeploy/helm"
+  count      = var.prometheus ? 1 : 0
   name       = "prometheus"
   namespace  = module.prometheus-ns[0].name
   chart      = "prometheus"
@@ -25,7 +26,7 @@ server:
   ingress:
     enabled: true
 
-    ingressClassName: ${var.vpn ? "internal" : "nginx"}
+    ingressClassName: ${var.vpn ? "internal-nginx" : "nginx"}
 
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-prod

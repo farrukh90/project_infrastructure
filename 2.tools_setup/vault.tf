@@ -13,6 +13,7 @@ module "vault-ns" {
 # Deploy Vault using Helm into the Vault namespace
 module "vault-terraform-helm" {
   source     = "farrukh90/appdeploy/helm"
+  count      = var.vault ? 1 : 0
   name       = "vault"
   namespace  = module.vault-ns[0].name
   chart      = "vault"
@@ -40,7 +41,7 @@ server:
 
   ingress:
     enabled: true
-    ingressClassName: ${var.vpn ? "internal" : "nginx"}
+    ingressClassName: ${var.vpn ? "internal-nginx" : "nginx"}
     annotations:
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
       ingress.kubernetes.io/ssl-redirect: "false"

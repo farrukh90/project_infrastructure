@@ -39,8 +39,8 @@ node_locations = [
 #######################################
 #### Enable and disable services
 #######################################
-ingress = true
-vault   = true
-grafana = true
+ingress    = true
+vault      = true
+grafana    = true
 prometheus = true
-vpn = true
+vpn        = true # careful with enabling. it will change the records of each application

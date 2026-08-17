@@ -197,12 +197,12 @@ controller:
           app.kubernetes.io/component: controller
 
   ingressClassResource:
-    name: internal
+    name: internal-nginx
     enabled: true
     default: false
     controllerValue: k8s.io/internal-ingress-nginx
 
-  ingressClass: internal
+  ingressClass: internal-nginx
 
   electionID: internal-ingress-controller-leader
 

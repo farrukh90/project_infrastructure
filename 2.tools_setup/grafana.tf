@@ -13,6 +13,7 @@ module "grafana-ns" {
 # Deploy Grafana using Helm into the Grafana namespace
 module "grafana-terraform-helm" {
   source     = "farrukh90/appdeploy/helm"
+  count      = var.grafana ? 1 : 0
   name       = "grafana"
   namespace  = module.grafana-ns[0].name
   chart      = "grafana"
@@ -22,7 +23,7 @@ module "grafana-terraform-helm" {
 
 ingress:
   enabled: true
-  ingressClassName: ${var.vpn ? "internal" : "nginx"}
+  ingressClassName: ${var.vpn ? "internal-nginx" : "nginx"}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     ingress.kubernetes.io/ssl-redirect: "false"
