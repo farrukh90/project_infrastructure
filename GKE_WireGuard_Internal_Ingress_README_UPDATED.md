@@ -8,7 +8,7 @@ NGINX Ingress that is reachable from a laptop only through WireGuard.
 
 ## Final Architecture
 
-\`\`\` text
+``` text
                                       INTERNET
                                          |
               +--------------------------+--------------------------+
@@ -50,19 +50,19 @@ NGINX Ingress that is reachable from a laptop only through WireGuard.
                               \|                     |
                               v                     v
                             Pods                  Pods
-\`\`\`
+```
 
 Split tunnel:
 
-\`\`\` text
+``` text
 Normal Internet -----------------------------> normal Wi-Fi / ISP
 10.8.0.0/24 --------------------------------> WireGuard
 10.128.0.20/32 -----------------------------> WireGuard -> Internal Ingress
-\`\`\`
+```
 
 ## DNS Layout
 
-\`\`\` text
+``` text
 vpn.awsprojectxconsulting.net
     -> Public NGINX Ingress
     -> wg-easy Web UI :51821
@@ -76,18 +76,18 @@ internal-grafana.awsprojectxconsulting.net
     -> 10.128.0.20 when VPN/private mode is enabled
     -> Internal ingress-nginx
     -> Grafana
-\`\`\`
+```
 
 A cleaner future design is:
 
-\`\`\` text
+``` text
 Public zone:  awsprojectxconsulting.net
 Private zone: internal.awsprojectxconsulting.net
-\`\`\`
+```
 
 ## 1. VPN Namespace
 
-\`\`\` hcl
+``` hcl
 module "vpn-ns" {
   source = "farrukh90/ns/kubernetes"
   count  = var.vpn ? 1 : 0
@@ -102,11 +102,11 @@ module "vpn-ns" {
     managedby = "terraform"
   }
 }
-\`\`\`
+```
 
 ## 2. Generate and Store the wg-easy Admin Password
 
-\`\`\` hcl
+``` hcl
 resource "random\_password" "wireguard\_admin\_password" {
   count   = var.vpn ? 1 : 0
   length  = 24
@@ -137,13 +137,13 @@ data "google\_secret\_manager\_secret\_version" "wireguard\_admin\_password" {
     google\_secret\_manager\_secret\_version.wireguard\_admin\_password
   ]
 }
-\`\`\`
+```
 
 Retrieve it with:
 
-\`\`\` bash
+``` bash
 gcloud secrets versions access latest --secret="wireguard-admin-password" --project="$GOOGLE\_CLOUD\_PROJECT"
-\`\`\`
+```
 
 ## 3. Deploy wg-easy
 
@@ -151,7 +151,7 @@ We first tested \`wg-access-server\`, but its old Helm chart rendered
 \`networking.k8s.io/v1beta1\` Ingress objects. Modern GKE rejected that
 API, so we switched to \`wg-easy\`.
 
-\`\`\` hcl
+``` hcl
 module "wireguard-terraform-helm" {
   source = "farrukh90/appdeploy/helm"
   count  = var.vpn ? 1 : 0
@@ -206,28 +206,28 @@ volume:
 EOF
   ]
 }
-\`\`\`
+```
 
 ### IPv6 Fix
 
 \`wg0\` initially failed with:
 
-\`\`\` text
+``` text
 Error: ipv6: IPv6 is disabled on this device.
-\`\`\`
+```
 
 The fix was:
 
-\`\`\` yaml
+``` yaml
 DISABLE\_IPV6: "true"
-\`\`\`
+```
 
 Verify:
 
-\`\`\` bash
+``` bash
 POD=$(kubectl get pod -n vpn -o jsonpath='{.items[0].metadata.name}')
 kubectl exec -n vpn "$POD" -- ip link show wg0
-\`\`\`
+```
 
 ## 4. Separate UDP 51820 from the Web UI
 
@@ -237,7 +237,7 @@ GKE rejected one LoadBalancer containing both \`51820/UDP\` and
 The Helm Service stays \`ClusterIP\`. A separate UDP-only LoadBalancer
 exposes WireGuard:
 
-\`\`\` hcl
+``` hcl
 resource "kubernetes\_service\_v1" "wireguard\_udp" {
   count = var.vpn ? 1 : 0
 
@@ -270,13 +270,13 @@ resource "kubernetes\_service\_v1" "wireguard\_udp" {
     module.wireguard-terraform-helm
   ]
 }
-\`\`\`
+```
 
 Observed public WireGuard endpoint:
 
-\`\`\` text
+``` text
 35.192.22.36:51820/UDP
-\`\`\`
+```
 
 ## 5. WireGuard Client
 
@@ -284,16 +284,16 @@ Use the WireGuard client, not OpenVPN.
 
 The generated profile initially used:
 
-\`\`\` ini
+``` ini
 AllowedIPs = 0.0.0.0/0, ::/0
-\`\`\`
+```
 
 That created a full tunnel and caused the laptop to lose normal Internet
 access.
 
 We changed it to split tunneling:
 
-\`\`\` ini
+``` ini
 [Interface]
 Address = 10.8.0.2/32
 DNS = 1.1.1.1
@@ -303,33 +303,33 @@ MTU = 1420
 AllowedIPs = 10.8.0.0/24, 10.128.0.20/32
 Endpoint = 35.192.22.36:51820
 PersistentKeepalive = 25
-\`\`\`
+```
 
 After DNS is stable, the endpoint can be:
 
-\`\`\` ini
+``` ini
 Endpoint = wg.awsprojectxconsulting.net:51820
-\`\`\`
+```
 
 ## 6. Verify WireGuard
 
-\`\`\` bash
+``` bash
 POD=$(kubectl get pod -n vpn -o jsonpath='{.items[0].metadata.name}')
 kubectl exec -n vpn "$POD" -- wg
-\`\`\`
+```
 
 Success includes:
 
-\`\`\` text
+``` text
 latest handshake: ...
 transfer: ...
-\`\`\`
+```
 
 ## 7. Internal Ingress Controller
 
 The internal ingress is part of the VPN/private-access feature:
 
-\`\`\` hcl
+``` hcl
 module "internal-ingress-ns" {
   source = "farrukh90/ns/kubernetes"
   count  = var.vpn ? 1 : 0
@@ -343,9 +343,9 @@ module "internal-ingress-ns" {
     managedby = "terraform"
   }
 }
-\`\`\`
+```
 
-\`\`\` hcl
+``` hcl
 module "internal-ingress-terraform-helm" {
   source = "farrukh90/appdeploy/helm"
   count  = var.vpn ? 1 : 0
@@ -379,39 +379,39 @@ controller:
 EOF
   ]
 }
-\`\`\`
+```
 
 Observed internal LB:
 
-\`\`\` text
+``` text
 10.128.0.20
-\`\`\`
+```
 
 ## 8. Test Internal Ingress
 
 From the VPN-connected laptop:
 
-\`\`\` bash
+``` bash
 curl -v http\://10.128.0.20
-\`\`\`
+```
 
 An NGINX \`404 Not Found\` is a successful networking test. It proves:
 
-\`\`\` text
+``` text
 Laptop -> WireGuard -> GKE -> Internal LoadBalancer -> internal ingress-nginx
-\`\`\`
+```
 
 ## 9. Switch Grafana Based on \`var.vpn\`
 
 One Grafana deployment can dynamically select the controller:
 
-\`\`\` hcl
+``` hcl
 ingressClassName: ${var.vpn ? "internal" : "nginx"}
-\`\`\`
+```
 
 Example:
 
-\`\`\` hcl
+``` hcl
 ingress:
   enabled: true
   ingressClassName: ${var.vpn ? "internal" : "nginx"}
@@ -429,14 +429,14 @@ ingress:
     \- secretName: grafana-tls
       hosts:
         \- grafana.${var.dns\_name}
-\`\`\`
+```
 
 Behavior:
 
-\`\`\` text
+``` text
 vpn = false -> nginx    -> public LB
 vpn = true  -> internal -> private LB -> VPN required
-\`\`\`
+```
 
 ## 10. ExternalDNS
 
@@ -469,31 +469,31 @@ WireGuard there is no route to `10.128.0.20`; with WireGuard the route exists.
 
 Host-routing test:
 
-\`\`\` bash
+``` bash
 curl -v -H "Host: internal-grafana.awsprojectxconsulting.net" http\://10.128.0.20
-\`\`\`
+```
 
 Observed:
 
-\`\`\` text
+``` text
 308 Permanent Redirect
 Location: https\://internal-grafana.awsprojectxconsulting.net
-\`\`\`
+```
 
 HTTPS test:
 
-\`\`\` bash
+``` bash
 curl -vk https\://internal-grafana.awsprojectxconsulting.net
-\`\`\`
+```
 
 Observed:
 
-\`\`\` text
+``` text
 IPv4: 10.128.0.20
 SSL certificate verify ok
 HTTP/2 302
 location: /login
-\`\`\`
+```
 
 With WireGuard disconnected, Grafana became unavailable. That is the
 intended behavior.
@@ -592,25 +592,25 @@ Adding \`count\` changes an existing module address.
 
 Before:
 
-\`\`\` text
+``` text
 module.ingress-terraform-helm.helm\_release.this
-\`\`\`
+```
 
 After:
 
-\`\`\` text
+``` text
 module.ingress-terraform-helm[0].helm\_release.this
-\`\`\`
+```
 
 Move the state instead of destroying/recreating:
 
-\`\`\` bash
+``` bash
 terraform state mv   'module.ingress-terraform-helm.helm\_release.this'   'module.ingress-terraform-helm[0].helm\_release.this'
-\`\`\`
+```
 
 ## 15. Useful Commands
 
-\`\`\` bash
+``` bash
 kubectl get pods -n vpn -o wide
 kubectl get svc -n vpn -o wide
 kubectl get ingress -n vpn
@@ -631,11 +631,11 @@ dig +short internal-grafana.awsprojectxconsulting.net
 
 curl -v http\://10.128.0.20
 curl -vk https\://internal-grafana.awsprojectxconsulting.net
-\`\`\`
+```
 
 ## 16. Mental Model
 
-\`\`\` text
+``` text
 DNS
  -> tells the client which IP to use
 
@@ -662,20 +662,20 @@ ExternalDNS
 
 cert-manager
  -> manages TLS certificates
-\`\`\`
+```
 
 ## Result
 
 The completed design provides:
 
-\`\`\` text
+``` text
 Public apps  -> Public ingress-nginx -> Internet
 Private apps -> Internal ingress-nginx -> WireGuard required
-\`\`\`
+```
 
 Grafana was successfully tested through:
 
-\`\`\` text
+``` text
 Laptop
  -> WireGuard
  -> 10.128.0.20
@@ -683,4 +683,4 @@ Laptop
  -> Grafana Service
  -> Grafana Pod
  -> HTTPS /login
-\`\`\`
+```
